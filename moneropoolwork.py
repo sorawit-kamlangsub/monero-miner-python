@@ -31,9 +31,12 @@ def main():
 
     print(f"⛏️ Mining block height {job.get('height')}...")
 
-    flags = randomx.RANDOMX_FLAG_DEFAULT
+    # Set flags manually: JIT + HARD_AES
+    flags = 0x10 | 0x4
+
     cache = randomx.Cache(flags)
     cache.init(bytes.fromhex(seed_hash))
+
     vm = randomx.VirtualMachine(flags, cache)
 
     for nonce in range(1_000_000):
