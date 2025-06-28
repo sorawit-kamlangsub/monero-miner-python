@@ -5,6 +5,6 @@ RUN apt-get update && apt-get install -y build-essential git python3-dev && rm -
 RUN pip install pyrx
 
 WORKDIR /app
-COPY miner.py .
+COPY moneropoolwork.py .
 
 ENTRYPOINT ["python", "moneropoolwork.py"]
