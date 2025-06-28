@@ -29,18 +29,19 @@ def main():
     blob = bytearray.fromhex(blob_hex)
     nonce_offset = 39
 
-    print(f"Mining block height {job.get('height')}...")
+    print(f"⛏️ Mining block height {job.get('height')}...")
 
-    # Use py-randomx API directly
-    cache = randomx.Cache(bytes.fromhex(seed_hash))
-    vm = randomx.VirtualMachine(cache)
+    flags = randomx.RANDOMX_FLAG_DEFAULT
+    cache = randomx.Cache(flags)
+    cache.init(bytes.fromhex(seed_hash))
+    vm = randomx.VirtualMachine(flags, cache)
 
     for nonce in range(1_000_000):
         blob[nonce_offset:nonce_offset+4] = struct.pack('<I', nonce)
         h = vm.calculate_hash(blob)
         hash_int = int.from_bytes(h, 'little')
         if hash_int < target:
-            print(f"✅ Valid nonce: {nonce}")
+            print(f"✅ Valid nonce found: {nonce}")
             print(f"Hash: {h.hex()}")
             return
 
