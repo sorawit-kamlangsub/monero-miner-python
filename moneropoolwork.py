@@ -8,7 +8,12 @@ def compact_to_target(compact):
     n = int.from_bytes(bytes.fromhex(compact), 'little')
     exponent = n >> 24
     mantissa = n & 0xFFFFFF
-    target = mantissa << (8 * (exponent - 3))
+
+    if exponent <= 3:
+        target = mantissa >> (8 * (3 - exponent))
+    else:
+        target = mantissa << (8 * (exponent - 3))
+
     return target
 
 def main():
