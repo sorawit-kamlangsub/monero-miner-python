@@ -1,10 +1,15 @@
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y build-essential git python3-dev && rm -rf /var/lib/apt/lists/*
+# Install system build tools
+RUN apt-get update && \
+    apt-get install -y git build-essential cmake python3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN pip install pyrx
+# Install py-randomx (from source)
+RUN pip install RandomX
 
 WORKDIR /app
 COPY moneropoolwork.py .
+COPY job.json .
 
-ENTRYPOINT ["python", "moneropoolwork.py"]
+ENTRYPOINT ["python", "moneropoolwork.py", "job.json"]
