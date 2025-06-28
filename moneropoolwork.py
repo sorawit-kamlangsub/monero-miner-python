@@ -1,8 +1,7 @@
 import struct
 import json
 import sys
-
-import pyrx
+import randomx
 
 def compact_to_target(compact):
     n = int.from_bytes(bytes.fromhex(compact), 'little')
@@ -18,9 +17,9 @@ def compact_to_target(compact):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python miner.py job.json")
+        print("Usage: python moneropoolwork.py job.json")
         sys.exit(1)
-    
+
     job_file = sys.argv[1]
 
     with open(job_file, "r") as f:
@@ -34,20 +33,22 @@ def main():
     blob = bytearray.fromhex(blob_hex)
     nonce_offset = 39
 
-    rx = pyrx.get_rx_hash(seed_hash)
-
     print(f"Mining block height {job.get('height')}...")
+
+    flags = randomx.Flag.DEFAULT
+    cache = randomx.Cache(flags, bytes.fromhex(seed_hash))
+    vm = randomx.VirtualMachine(flags, cache)
 
     for nonce in range(1_000_000):
         blob[nonce_offset:nonce_offset+4] = struct.pack('<I', nonce)
-        h = rx.hash(blob)
+        h = vm.calculate_hash(blob)
         hash_int = int.from_bytes(h, 'little')
         if hash_int < target:
-            print(f"Valid nonce found: {nonce}")
+            print(f"✅ Valid nonce: {nonce}")
             print(f"Hash: {h.hex()}")
             return
 
-    print("No valid nonce found in range.")
+    print("❌ No valid nonce found.")
 
 if __name__ == "__main__":
     main()
