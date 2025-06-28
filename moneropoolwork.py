@@ -34,7 +34,7 @@ def main():
     blob = bytearray.fromhex(blob_hex)
     nonce_offset = 39
 
-    rx = pyrx.Randomx(seed_hash)
+    rx = pyrx.get_rx_hash(seed_hash)
 
     print(f"Mining block height {job.get('height')}...")
 
