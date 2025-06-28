@@ -7,13 +7,10 @@ def compact_to_target(compact):
     n = int.from_bytes(bytes.fromhex(compact), 'little')
     exponent = n >> 24
     mantissa = n & 0xFFFFFF
-
     if exponent <= 3:
-        target = mantissa >> (8 * (3 - exponent))
+        return mantissa >> (8 * (3 - exponent))
     else:
-        target = mantissa << (8 * (exponent - 3))
-
-    return target
+        return mantissa << (8 * (exponent - 3))
 
 def main():
     if len(sys.argv) < 2:
@@ -21,7 +18,6 @@ def main():
         sys.exit(1)
 
     job_file = sys.argv[1]
-
     with open(job_file, "r") as f:
         job = json.load(f)
 
@@ -35,9 +31,9 @@ def main():
 
     print(f"Mining block height {job.get('height')}...")
 
-    flags = randomx.Flag.DEFAULT
-    cache = randomx.Cache(flags, bytes.fromhex(seed_hash))
-    vm = randomx.VirtualMachine(flags, cache)
+    # Use py-randomx API directly
+    cache = randomx.Cache(bytes.fromhex(seed_hash))
+    vm = randomx.VirtualMachine(cache)
 
     for nonce in range(1_000_000):
         blob[nonce_offset:nonce_offset+4] = struct.pack('<I', nonce)
