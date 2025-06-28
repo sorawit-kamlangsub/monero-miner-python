@@ -7,4 +7,4 @@ RUN pip install pyrx
 WORKDIR /app
 COPY miner.py .
 
-ENTRYPOINT ["python", "miner.py"]
+ENTRYPOINT ["python", "moneropoolwork.py"]
