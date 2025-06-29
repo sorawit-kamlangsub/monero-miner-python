@@ -1,54 +1,75 @@
-import struct
 import json
+import time
+import struct
+import binascii
+import pycryptonight
+import pyrx
 import sys
-import randomx
+import os
 
-def compact_to_target(compact):
-    n = int.from_bytes(bytes.fromhex(compact), 'little')
-    exponent = n >> 24
-    mantissa = n & 0xFFFFFF
-    if exponent <= 3:
-        return mantissa >> (8 * (3 - exponent))
+nicehash = False  # set True if testing nicehash jobs
+
+def pack_nonce(blob, nonce):
+    b = binascii.unhexlify(blob)
+    bin_data = struct.pack('39B', *bytearray(b[:39]))
+    if nicehash:
+        bin_data += struct.pack('I', nonce & 0x00ffffff)[:3]
+        bin_data += struct.pack(f'{len(b)-42}B', *bytearray(b[42:]))
     else:
-        return mantissa << (8 * (exponent - 3))
+        bin_data += struct.pack('I', nonce)
+        bin_data += struct.pack(f'{len(b)-43}B', *bytearray(b[43:]))
+    return bin_data
+
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python moneropoolwork.py job.json")
-        sys.exit(1)
-
-    job_file = sys.argv[1]
-    with open(job_file, "r") as f:
+    with open('job.json', 'r') as f:
         job = json.load(f)
 
-    blob_hex = job["blob"]
-    target_hex = job["target"]
-    seed_hash = job["seed_hash"]
+    blob = job['blob']
+    target_hex = job['target']
+    job_id = job.get('job_id', '')
+    height = job.get('height', 0)
+    seed_hash = job.get('seed_hash', '')
 
-    target = compact_to_target(target_hex)
-    blob = bytearray.fromhex(blob_hex)
-    nonce_offset = 39
+    block_major = int(blob[:2], 16)
+    cnv = block_major - 6 if block_major >= 7 else 0
 
-    print(f"⛏️ Mining block height {job.get('height')}...")
+    print(f"🔧 Starting job: height={height}, target={target_hex}, cn_variant={cnv}")
 
-    # Set flags manually: JIT + HARD_AES
-    flags = 0x10 | 0x4
+    target = struct.unpack('I', binascii.unhexlify(target_hex))[0]
+    if target >> 32 == 0:
+        target = int(0xFFFFFFFFFFFFFFFF / int(0xFFFFFFFF / target))
 
-    cache = randomx.Cache(flags)
-    cache.init(bytes.fromhex(seed_hash))
+    seed_bin = binascii.unhexlify(seed_hash) if cnv > 5 else None
+    nonce = 0
+    hash_count = 0
+    start_time = time.time()
 
-    vm = randomx.VirtualMachine(flags, cache)
+    while True:
+        bin_blob = pack_nonce(blob, nonce)
+        if cnv > 5:
+            hash_result = pyrx.get_rx_hash(bin_blob, seed_bin, height)
+        else:
+            hash_result = pycryptonight.cn_slow_hash(bin_blob, cnv, 0, height)
 
-    for nonce in range(1_000_000):
-        blob[nonce_offset:nonce_offset+4] = struct.pack('<I', nonce)
-        h = vm.calculate_hash(blob)
-        hash_int = int.from_bytes(h, 'little')
-        if hash_int < target:
-            print(f"✅ Valid nonce found: {nonce}")
-            print(f"Hash: {h.hex()}")
-            return
+        hash_count += 1
+        r64 = struct.unpack('Q', hash_result[24:])[0]
+        hex_hash = binascii.hexlify(hash_result).decode()
+        if r64 < target:
+            elapsed = time.time() - start_time
+            hps = int(hash_count / elapsed)
+            print(f"\n✅ Valid nonce found: {nonce}")
+            print(f"Hash: {hex_hash}")
+            print(f"Hashrate: {hps} H/s")
+            print(f"Result: {{'job_id': '{job_id}', 'nonce': {nonce}, 'result': '{hex_hash}'}}")
+            break
 
-    print("❌ No valid nonce found.")
+        if nonce % 10000 == 0:
+            sys.stdout.write(f"\r⛏️ Nonce: {nonce} / Hashes: {hash_count}")
+            sys.stdout.flush()
 
-if __name__ == "__main__":
+        nonce += 1
+
+
+if __name__ == '__main__':
     main()
