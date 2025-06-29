@@ -6,7 +6,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install py-randomx (from source)
-RUN pip install RandomX
+RUN pip install py-cryptonight && pip install git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
 
 WORKDIR /app
 COPY moneropoolwork.py .
