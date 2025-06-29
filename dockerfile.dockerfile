@@ -1,6 +1,10 @@
 FROM python:3.11-slim
 
-# Install system dependencies
+# Set environment to prevent Python from writing .pyc files and using buffered output
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install dependencies for building pyrx
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     build-essential \
@@ -9,19 +13,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libffi-dev \
     ca-certificates \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip, setuptools, wheel
-RUN python -m pip install --upgrade pip setuptools wheel
+# Upgrade pip and essential Python packaging tools
+RUN python3 -m pip install --upgrade pip setuptools wheel
 
-# DEBUG: Install pyrx with verbose to see the real cause of error
-RUN pip install py-cryptonight && \
-    pip install --verbose git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
+# DEBUG: Install pyrx with full verbose output
+RUN pip install --verbose py-cryptonight && \
+    pip install --verbose --no-cache-dir git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
 
-# Add your files
+# Set working directory
 WORKDIR /app
+
+# Copy application code
 COPY moneropoolwork.py .
 COPY job.json .
 
-# Run the miner
+# Define default command
 ENTRYPOINT ["python", "moneropoolwork.py", "job.json"]
