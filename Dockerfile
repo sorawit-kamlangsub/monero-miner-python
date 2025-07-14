@@ -1,34 +1,47 @@
-FROM python:3.11-slim
+# ────────────────────────────────────────────────────────────────────────────────
+# Stage 1 – build everything we need
+# ────────────────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim AS build
 
-# Set environment to prevent Python from writing .pyc files and using buffered output
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Avoid .pyc files and use unbuffered stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install dependencies for building pyrx
+# — System‑level build tools and libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    build-essential \
-    cmake \
-    python3-dev \
-    libssl-dev \
-    libffi-dev \
-    ca-certificates \
-    pkg-config \
+        git build-essential cmake python3-dev \
+        libssl-dev libffi-dev pkg-config ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and essential Python packaging tools
-RUN python3 -m pip install --upgrade pip setuptools wheel
+# — Latest Python packaging tools
+RUN python -m pip install --upgrade pip setuptools wheel
 
-# DEBUG: Install pyrx with full verbose output
-RUN pip install --verbose py-cryptonight && \
-    pip install --recursive --no-cache-dir git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
+# ────────────────────────────────────────────────────────────────────────────────
+# Python dependencies
+# ────────────────────────────────────────────────────────────────────────────────
+# 1) Pure‑pip package
+RUN pip install --no-cache-dir py-cryptonight
 
-# Set working directory
+# 2) pyrx – clone WITH sub‑modules, then install from local path
+WORKDIR /opt
+RUN git clone --depth 1 --recursive https://github.com/jtgrassie/pyrx.git
+RUN pip install --no-cache-dir /opt/pyrx
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Stage 2 – runtime‑only image (smaller)
+# ────────────────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Copy installed site‑packages and entry points from the build stage
+COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=build /usr/local/bin /usr/local/bin
+
+# Your application code
 WORKDIR /app
-
-# Copy application code
 COPY moneropoolwork.py .
 COPY job.json .
 
-# Define default command
 ENTRYPOINT ["python", "moneropoolwork.py", "job.json"]
