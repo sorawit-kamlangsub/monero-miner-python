@@ -1,7 +1,7 @@
 # ────────────────────────────────────────────────────────────────────────────────
 # Stage 1 – build everything we need
 # ────────────────────────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS build
+FROM python:3.10-slim AS build
 
 # Avoid .pyc files and use unbuffered stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
