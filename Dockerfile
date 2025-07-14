@@ -21,7 +21,7 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 
 # DEBUG: Install pyrx with full verbose output
 RUN pip install --verbose py-cryptonight && \
-    pip install --verbose  --recursive --no-cache-dir git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
+    pip install --recursive --no-cache-dir git+https://github.com/jtgrassie/pyrx.git#egg=pyrx
 
 # Set working directory
 WORKDIR /app
